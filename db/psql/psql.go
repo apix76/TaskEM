@@ -3,13 +3,22 @@ package psql
 import (
 	"TaskEM/entities"
 	"database/sql"
-	"fmt"
 	"github.com/huandu/go-sqlbuilder"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type DbAccess struct {
 	db *sql.DB
+}
+
+type Cond struct {
+	Id           *string
+	Name         *string
+	AgeGt, AgeLt *int
+	Surname      *string
+	Race         *string
+	Gender       *string
+	Patronymic   *string
 }
 
 /*
@@ -34,8 +43,28 @@ func NewDb(dsn string) (DbAccess, error) {
 	return Db, err
 }
 
-func (db *DbAccess) Patch(user entities.User){
-	sqlbuilder.Update("users")
+func (db *DbAccess) Update(user entities.User) error {
+	sqlRequest := sqlbuilder.Update("users")
+	if user.Name != "" {
+		sqlRequest.Set(sqlRequest.Assign("name", user.Name),
+			sqlRequest.Assign("age", user.Age),
+			sqlRequest.Assign("race", user.Race),
+			sqlRequest.Assign("gender", user.Gender),
+		)
+	}
+	if user.Patronymic != "" {
+		sqlRequest.Set(sqlRequest.Assign("patronymic", user.Patronymic))
+	}
+	if user.Surname != "" {
+		sqlRequest.Set(sqlRequest.Assign("surname", user.Surname))
+	}
+
+	sqlRequest.Where("id = ", user.Id)
+
+	query, args := sqlRequest.Build()
+
+	_, err := db.db.Exec(query, args...)
+	return err
 }
 
 func (db *DbAccess) Add(user entities.User) error {
@@ -43,37 +72,60 @@ func (db *DbAccess) Add(user entities.User) error {
 		Cols("id", "name", "surname", "patronymic", "age", "gender", "race").
 		Values(user.Id, user.Name, user.Surname, user.Patronymic, user.Age, user.Gender, user.Race)
 
-	if _, err := db.db.Exec(sqlRequest.String()); err != nil {
+	query, args := sqlRequest.Build()
+	if _, err := db.db.Exec(query, args...); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (db *DbAccess) Get(condition map[string]string) (string, error) {
+func (db *DbAccess) Get(cond *Cond) ([]entities.User, error) {
 	sqlRequest := sqlbuilder.Select("*").From("users")
 
-	if len(condition) != 0 {
-		for _, v := range condition {
-			sqlRequest = sqlRequest.Where(v)
-		}
+	if cond.Id != nil {
+		sqlRequest.Where(sqlRequest.Equal("id", *cond.Id))
+	}
+	if cond.Name != nil {
+		sqlRequest.Where(sqlRequest.Equal("name", *cond.Name))
+	}
+	if cond.Surname != nil {
+		sqlRequest.Where(sqlRequest.Equal("surname", *cond.Surname))
+	}
+	if cond.Race != nil {
+		sqlRequest.Where(sqlRequest.Equal("race", *cond.Race))
+	}
+	if cond.Gender != nil {
+		sqlRequest.Where(sqlRequest.Equal("gender", *cond.Gender))
+	}
+	if cond.Patronymic != nil {
+		sqlRequest.Where(sqlRequest.Equal("patronymic", *cond.Patronymic))
+	}
+	if cond.AgeLt != nil {
+		sqlRequest.Where(sqlRequest.LE("age", cond.AgeLt))
+	}
+	if cond.AgeGt != nil {
+		sqlRequest.Where(sqlRequest.GT("age", cond.AgeGt))
 	}
 
-	row := db.db.QueryRow(sqlRequest.String())
+	query, args := sqlRequest.Build()
 
-	var URL string
+	rows, err := db.db.Query(query, args...)
+	defer rows.Close()
 
-	if err := row.Scan(&URL); err != nil {
-		if err == sql.ErrNoRows {
-			return "",
-		} else {
-			return "", err
+	for rows.Next() {
+		var (
+			id   int64
+			name string
+		)
+		if err := rows.Scan(&id, &name); err != nil {
+			log.Fatal(err)
 		}
-	}
 
-	return URL, nil
+	}
+	return users, err
 }
 
-func (db *DbAccess) Delete(id int) error {
+func (db *DbAccess) Delete(id string) error {
 	_, err := db.db.Exec("delete from users where id = $1", id)
 	return err
 }

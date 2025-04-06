@@ -1,19 +1,28 @@
 package main
 
 import (
-	"TaskEM/conf"
-	"TaskEM/server/rest"
+	"fmt"
+	"github.com/huandu/go-sqlbuilder"
 	"log"
 )
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	//
+	//conf, err := conf.NewConfig()
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//db, err := psql.NewDb(conf.PgsqlNameServe)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//u := usecase.NewUseCase(&db)
+	//
+	//rest.Server_Echo(conf, u)
 
-	conf, err := conf.NewConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//rest.Http(conf)
-	rest.Server_Echo(conf)
+	sql := sqlbuilder.Update("user").Set("name")
+	fmt.Print(sql)
 }

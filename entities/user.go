@@ -1,7 +1,7 @@
 package entities
 
 type User struct {
-	Id         int
+	Id         string
 	Name       string
 	Surname    string
 	Patronymic string
@@ -11,6 +11,7 @@ type User struct {
 }
 
 type UserRequest struct {
+	Id         string
 	Name       string
 	Surname    string
 	Patronymic string

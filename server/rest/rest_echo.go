@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func Server_Echo(conf conf.Conf) {
+func Server_Echo(conf conf.Conf, use *usecase.Usecase) {
 	e := echo.New()
 
 	e.POST("/", func(c echo.Context) error {
@@ -17,20 +17,20 @@ func Server_Echo(conf conf.Conf) {
 			return err
 		}
 
-		err := usecase.Post(*u)
+		result, err := use.Post(*u)
 		if err != nil {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, u)
+		return c.JSON(http.StatusOK, result)
 	})
 
 	e.GET("/", func(c echo.Context) error {
-		u := new(entities.UserRequest)
+		var u map[string]string
 		if err := c.Bind(u); err != nil {
 			return err
 		}
-		users, err := usecase.Get(*u)
+		users, err := use.Get(u)
 		if err != nil {
 			return err
 		}
@@ -43,7 +43,7 @@ func Server_Echo(conf conf.Conf) {
 		if err := c.Bind(u); err != nil {
 			return err
 		}
-		usecase.Patch(*u)
+		use.Patch(*u)
 
 		return c.JSON(http.StatusOK, u)
 	})
@@ -53,9 +53,13 @@ func Server_Echo(conf conf.Conf) {
 		if err := c.Bind(u); err != nil {
 			return err
 		}
-		usecase.Delete(*u)
+		err := use.Delete(u.Id)
 
-		return c.JSON(http.StatusOK, u)
+		if err != nil {
+			return err
+		}
+
+		return c.NoContent(http.StatusOK)
 	})
 
 	e.Logger.Fatal(e.Start(conf.HttpPort))
