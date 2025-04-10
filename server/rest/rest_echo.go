@@ -26,11 +26,19 @@ func Server_Echo(conf conf.Conf, use *usecase.Usecase) {
 	})
 
 	e.GET("/", func(c echo.Context) error {
-		var u map[string]string
-		if err := c.Bind(u); err != nil {
-			return err
-		}
-		users, err := use.Get(u)
+		cond := entities.Cond{}
+		b := echo.QueryParamsBinder(c)
+
+		b.String("id", cond.Id).
+			String("name", cond.Name).
+			String("surname", cond.Surname).
+			String("patronymic", cond.Patronymic).
+			Int("ageGt", cond.AgeGt).
+			Int("ageLt", cond.AgeLt).
+			String("gender", cond.Gender).
+			String("race", cond.Race).BindErrors()
+
+		users, err := use.Get(&cond)
 		if err != nil {
 			return err
 		}
@@ -63,4 +71,5 @@ func Server_Echo(conf conf.Conf, use *usecase.Usecase) {
 	})
 
 	e.Logger.Fatal(e.Start(conf.HttpPort))
+	//e.StartTLS(conf)
 }

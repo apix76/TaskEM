@@ -5,26 +5,17 @@ import (
 	"database/sql"
 	"github.com/huandu/go-sqlbuilder"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"log"
 )
 
 type DbAccess struct {
 	db *sql.DB
 }
 
-type Cond struct {
-	Id           *string
-	Name         *string
-	AgeGt, AgeLt *int
-	Surname      *string
-	Race         *string
-	Gender       *string
-	Patronymic   *string
-}
-
 /*
 db:
 	table users:
-		id int
+		id text
 		name text
 		surname text
 		patronymic text (can be empty)
@@ -40,17 +31,32 @@ func NewDb(dsn string) (DbAccess, error) {
 	if Db.db, err = sql.Open("pgx", dsn); err != nil {
 		return Db, err
 	}
+	sql := sqlbuilder.CreateTable("users").IfNotExists().
+		Define("id", "TEXT", "NOT NULL", "PRIMARY KEY").
+		Define("name", "TEXT", "NOT NULL").
+		Define("surname", "TEXT", "NOT NULL").
+		Define("patronymic", "TEXT").
+		Define("age", "INTEGER", "NOT NULL").
+		Define("race", "TEXT", "NOT NULL").
+		Define("gender", "TEXT", "NOT NULL").String()
+
+	_, err = Db.db.Exec(sql)
 	return Db, err
 }
 
 func (db *DbAccess) Update(user entities.User) error {
 	sqlRequest := sqlbuilder.Update("users")
 	if user.Name != "" {
-		sqlRequest.Set(sqlRequest.Assign("name", user.Name),
-			sqlRequest.Assign("age", user.Age),
-			sqlRequest.Assign("race", user.Race),
-			sqlRequest.Assign("gender", user.Gender),
-		)
+		sqlRequest.Set(sqlRequest.Assign("name", user.Name))
+	}
+	if user.Age != 0 {
+		sqlRequest.Set(sqlRequest.Assign("age", user.Age))
+	}
+	if user.Race != "" {
+		sqlRequest.Set(sqlRequest.Assign("race", user.Race))
+	}
+	if user.Gender != "" {
+		sqlRequest.Set(sqlRequest.Assign("gender", user.Gender))
 	}
 	if user.Patronymic != "" {
 		sqlRequest.Set(sqlRequest.Assign("patronymic", user.Patronymic))
@@ -79,7 +85,9 @@ func (db *DbAccess) Add(user entities.User) error {
 	return nil
 }
 
-func (db *DbAccess) Get(cond *Cond) ([]entities.User, error) {
+func (db *DbAccess) Get(cond *entities.Cond) ([]entities.User, error) {
+	var users []entities.User
+
 	sqlRequest := sqlbuilder.Select("*").From("users")
 
 	if cond.Id != nil {
@@ -113,14 +121,12 @@ func (db *DbAccess) Get(cond *Cond) ([]entities.User, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var (
-			id   int64
-			name string
-		)
-		if err := rows.Scan(&id, &name); err != nil {
-			log.Fatal(err)
-		}
+		var user entities.User
 
+		if err = rows.Scan(&user.Id, &user.Name, &user.Surname, &user.Patronymic, &user.Age, &user.Gender, &user.Race); err != nil {
+			log.Println(err)
+		}
+		users = append(users, user)
 	}
 	return users, err
 }

@@ -16,8 +16,8 @@ func NewUseCase(db *psql.DbAccess) *Usecase {
 	return &Usecase{db: *db}
 }
 
-func (u *Usecase) Get(filter map[string]string) ([]entities.User, error) {
-	return u.db.Get(filter)
+func (u *Usecase) Get(cond *entities.Cond) ([]entities.User, error) {
+	return u.db.Get(cond)
 }
 
 func (u *Usecase) Delete(id string) error {
@@ -46,7 +46,7 @@ func (u *Usecase) Post(userSet entities.UserRequest) (entities.User, error) {
 func (u *Usecase) Patch(userSet entities.UserRequest) (entities.User, error) {
 	var err error
 
-	user := entities.User{Name: userSet.Name, Surname: userSet.Surname, Patronymic: userSet.Patronymic}
+	user := entities.User{Id: userSet.Id, Name: userSet.Name, Surname: userSet.Surname, Patronymic: userSet.Patronymic}
 
 	if user.Age, err = framework.GetAge(user.Name); err != nil {
 		return entities.User{}, err
@@ -58,5 +58,5 @@ func (u *Usecase) Patch(userSet entities.UserRequest) (entities.User, error) {
 		return entities.User{}, err
 	}
 
-	return u.db.Update(user)
+	return user, u.db.Update(user)
 }

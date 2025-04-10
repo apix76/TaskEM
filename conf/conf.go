@@ -7,6 +7,7 @@ import (
 
 type Conf struct {
 	HttpPort       string
+	HttpsPort      string
 	PgsqlNameServe string
 }
 
