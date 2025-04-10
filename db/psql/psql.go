@@ -31,7 +31,9 @@ func NewDb(dsn string) (DbAccess, error) {
 	if Db.db, err = sql.Open("pgx", dsn); err != nil {
 		return Db, err
 	}
-	sql := sqlbuilder.CreateTable("users").IfNotExists().
+	sqlcreate := sqlbuilder.PostgreSQL.NewCreateTableBuilder()
+
+	sql := sqlcreate.CreateTable("users").IfNotExists().
 		Define("id", "TEXT", "NOT NULL", "PRIMARY KEY").
 		Define("name", "TEXT", "NOT NULL").
 		Define("surname", "TEXT", "NOT NULL").
@@ -45,27 +47,29 @@ func NewDb(dsn string) (DbAccess, error) {
 }
 
 func (db *DbAccess) Update(user entities.User) error {
-	sqlRequest := sqlbuilder.Update("users")
+	sqlUpdate := sqlbuilder.PostgreSQL.NewUpdateBuilder()
+
+	sqlRequest := sqlUpdate.Update("users")
 	if user.Name != "" {
-		sqlRequest.Set(sqlRequest.Assign("name", user.Name))
+		sqlRequest.SetMore(sqlRequest.Assign("name", user.Name))
 	}
 	if user.Age != 0 {
-		sqlRequest.Set(sqlRequest.Assign("age", user.Age))
+		sqlRequest.SetMore(sqlRequest.Assign("age", user.Age))
 	}
 	if user.Race != "" {
-		sqlRequest.Set(sqlRequest.Assign("race", user.Race))
+		sqlRequest.SetMore(sqlRequest.Assign("race", user.Race))
 	}
 	if user.Gender != "" {
-		sqlRequest.Set(sqlRequest.Assign("gender", user.Gender))
+		sqlRequest.SetMore(sqlRequest.Assign("gender", user.Gender))
 	}
 	if user.Patronymic != "" {
-		sqlRequest.Set(sqlRequest.Assign("patronymic", user.Patronymic))
+		sqlRequest.SetMore(sqlRequest.Assign("patronymic", user.Patronymic))
 	}
 	if user.Surname != "" {
-		sqlRequest.Set(sqlRequest.Assign("surname", user.Surname))
+		sqlRequest.SetMore(sqlRequest.Assign("surname", user.Surname))
 	}
 
-	sqlRequest.Where("id = ", user.Id)
+	sqlRequest.Where(sqlRequest.Equal("id", user.Id))
 
 	query, args := sqlRequest.Build()
 
@@ -74,7 +78,9 @@ func (db *DbAccess) Update(user entities.User) error {
 }
 
 func (db *DbAccess) Add(user entities.User) error {
-	sqlRequest := sqlbuilder.InsertInto("users").
+	sqlInsert := sqlbuilder.PostgreSQL.NewInsertBuilder()
+
+	sqlRequest := sqlInsert.InsertInto("users").
 		Cols("id", "name", "surname", "patronymic", "age", "gender", "race").
 		Values(user.Id, user.Name, user.Surname, user.Patronymic, user.Age, user.Gender, user.Race)
 
@@ -87,8 +93,9 @@ func (db *DbAccess) Add(user entities.User) error {
 
 func (db *DbAccess) Get(cond *entities.Cond) ([]entities.User, error) {
 	var users []entities.User
+	sqlSelect := sqlbuilder.PostgreSQL.NewSelectBuilder()
 
-	sqlRequest := sqlbuilder.Select("*").From("users")
+	sqlRequest := sqlSelect.Select("*").From("users")
 
 	if cond.Id != nil {
 		sqlRequest.Where(sqlRequest.Equal("id", *cond.Id))

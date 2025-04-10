@@ -51,9 +51,12 @@ func Server_Echo(conf conf.Conf, use *usecase.Usecase) {
 		if err := c.Bind(u); err != nil {
 			return err
 		}
-		use.Patch(*u)
+		user, err := use.Patch(*u)
+		if err != nil {
+			return err
+		}
 
-		return c.JSON(http.StatusOK, u)
+		return c.JSON(http.StatusOK, user)
 	})
 
 	e.DELETE("/", func(c echo.Context) error {
